@@ -1,0 +1,206 @@
+--window things
+local _width = 1000
+local _height = 1000
+
+local _background = {0.1, 0.1, 0.1}
+local _foreground = {1, 1, 1}
+
+--[[IDK what this thing do
+I'm doing what math guy on youtube say]]
+local dz = 1
+
+--[[ Rotation angle around the Y axis. If it increases then axis gonna change]]
+local angle = 0
+
+-- Geometry things
+-- vs//vertex list // Basically this is corners
+-- fs//face list // edges (please this usage is true  (╥﹏╥))
+
+-- I couldn't model the model I wanted. I'm a lil bit idiot I guess
+vs = {
+    --back face
+    {x=-0.3,y=-0.3,z=-0.3}, -- 1 
+    {x= 0.3,y=-0.3,z=-0.3}, -- 2 
+    {x= 0.3,y= 0.3,z=-0.3}, -- 3 -
+    {x=-0.3,y= 0.3,z=-0.3}, -- 4 -
+
+    --front face
+    {x=-0.3,y=-0.3,z= 0.3}, -- 5 
+    {x= 0.3,y=-0.3,z= 0.3}, -- 6 
+    {x= 0.3,y= 0.3,z= 0.3}, -- 7 -
+    {x=-0.3,y= 0.3,z= 0.3}, -- 8 -
+
+    -- center
+    {x=0,y=0,z=0}, -- 9
+
+    --side centers
+    {x=-0.3,y=0,z=0}, --10 left
+    {x=0,y=-0.3,z=0}, --11 down
+    {x=0.3,y=0,z=0}, --12 right
+    {x=0,y=0.3,z=0}, -- 13 top
+    {x=0,y=0,z=0.3}, -- front
+    {x=0,y=0,z=-0.3} -- back
+}
+
+fs = {
+    {1,2,3,4},
+    {5,6,7,8},
+    {1,5},
+    {2,6},
+    {3,7},
+    {4,8},
+    {3,9},
+    {4,9},
+    {7,9},
+    {8,9},
+    {1,9},
+    {2,9},
+    {5,9},
+    {6,9},
+    -- sides
+    {9,10},
+    {9,11},
+    {9,12},
+    {9,13},
+    {9,14},
+    {9,15}
+}
+
+
+
+
+-- Rendering things (this things are important)
+
+-- Clearing the frame buffer (Should frame buffer be written as one word?)
+local function clear()
+    love.graphics.setColor(_background)
+    love.graphics.rectangle("fill", 0, 0, _width, _height)
+end
+
+--Drawing a square marker at a screen-space position
+local function point(p)
+    local size = 20
+
+    love.graphics.setColor(_foreground)
+    love.graphics.rectangle(
+        "fill",
+        p.x - size / 2,
+        p.y - size / 2,
+        size,
+        size
+    )
+end
+
+-- Drawing lines between 2 points
+local function line(p1, p2)
+    love.graphics.setColor(_foreground)
+    love.graphics.setLineWidth(3)
+    love.graphics.line(p1.x, p1.y, p2.x, p2.y)
+end
+
+--[[ Coordinate normalizing
+Converts are normalized device coordinates (-1..1) into pixel coordinates // In short we set cordinates on lower numbers (or in IDK)]]
+
+local function screen(p)
+    return {
+        x = (p.x + 1) / 2 * _width,
+        y = (1 - (p.y + 1) / 2) * _height
+    }
+end
+
+
+-- Camera is assumed to be located at the origin and looking towards the positive Z direction (If I understood the math guy said this is cordinate system of our camera)
+local function project(p)
+    return {
+        x = p.x / p.z,
+        y = p.y / p.z
+    }
+end
+
+--this applies a translation along the Z axiz
+local function translate_z(p, dz)
+    return {
+        x = p.x,
+        y = p.y,
+        z = p.z + dz
+    }
+end
+
+--[[ Rotating a point around the Y axis // Only the X and Z coordinates are affected cuz I want in this way :D
+If u want to rotate also in z or x then u should change cos and sin positions in the function
+Im too lazy for explain this so here is a video about it // https://www.khanacademy.org/math/linear-algebra/matrix-transformations/lin-trans-examples/v/rotation-in-r3-around-the-x-axis?playlist=Linear+Algebra&utm
+Thx khan academy]]
+local function rotate_xz(p, angle)
+    local c = math.cos(angle)
+    local s = math.sin(angle)
+
+    return {
+        x = p.x * c - p.z * s,
+        y = p.y,
+        z = p.x * s + p.z * c
+    }
+end
+
+--love2d functions load, update, draw etc, etc
+
+function love.load()
+    love.window.setMode(_width, _height)
+    love.window.setTitle("Wireframe Renderer")
+end
+
+function love.update(dt)
+-- Rotating at a constant angular velocity of π radians/second (IDK what the hell is this but seems cool)
+    angle = angle + math.pi * dt
+
+--[[ Uncomment to move the object away from the camera // dz = dz + dt]]
+end
+
+function love.draw()
+    clear()
+--[[Render vertices //]]
+
+--[[
+//probably this is inefficient usage//
+for _, vertex in ipairs(vs) do
+    point(
+        screen(
+            project(
+                translate_z(
+                    rotate_xz(vertex, angle),
+                    dz
+                )
+            )
+        )
+    )
+end
+    ]]
+-- Render wireframe faces
+
+    for _, face in ipairs(fs) do
+        for i = 1, #face do
+            local a = vs[face[i]]
+            local b = vs[face[(i % #face) + 1]]
+
+            line(
+                screen(
+                    project(
+                        translate_z(
+                            rotate_xz(a, angle),
+                            dz
+                        )
+                    )
+                ),
+                screen(
+                    project(
+                        translate_z(
+                            rotate_xz(b, angle),
+                            dz
+                        )
+                    )
+                )
+            )
+        end
+    end
+end
+
+--so thats it. If I helped you this is good
